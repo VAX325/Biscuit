@@ -46,10 +46,11 @@ const char* ReadFile(const char* const fileName)
 
 	_fseeki64(f, 0, SEEK_END);
 	size_t size = _ftelli64(f);
-	char* s = (char*)malloc(sizeof(char) * size);
+	char* s = (char*)malloc(sizeof(*s) * size + 1);
 	assert(s && "malloc error!");
 	_fseeki64(f, 0, SEEK_SET);
 	fread(s, sizeof(char), size, f);
+	s[sizeof(*s) * size] = '\0';
 	return s;
 }
 
@@ -64,22 +65,29 @@ void Execute(const char* code, size_t codeLen)
 		switch (code[i])
 		{
 			case 'i':
-				if (g_iPointerLocation > 0) g_iPointerLocation -= 1;
+				if (g_iPointerLocation > 0)
+				{
+					g_iPointerLocation -= 1;
+					pointerData = GetByIDPtr(g_iPointerLocation);
+				}
 				break;
 			case 'I':
 				if (g_iPointerLocation > 0)
 				{
 					g_iPointerLocation -= 1;
+					pointerData = GetByIDPtr(g_iPointerLocation);
 					*pointerData += GetByID(g_iPointerLocation + 1);
 				}
 				break;
 			case 'k':
 				g_iPointerLocation += 1;
 				if (g_Array.m_ziSize <= g_iPointerLocation) PushBack(&g_Array, ToPtr(0));
+				pointerData = GetByIDPtr(g_iPointerLocation);
 				break;
 			case 'K':
 				g_iPointerLocation += 1;
 				if (g_Array.m_ziSize <= g_iPointerLocation) PushBack(&g_Array, ToPtr(0));
+				pointerData = GetByIDPtr(g_iPointerLocation);
 				*pointerData += GetByID(g_iPointerLocation - 1);
 				break;
 			case 'r':
@@ -89,7 +97,7 @@ void Execute(const char* code, size_t codeLen)
 
 					puts("File Name: ");
 #ifdef WIN32
-					(void)scanf_s("%s", &Buff[0]);
+					(void)scanf_s("%s", &Buff[0], sizeof(Buff));
 #else
 					(void)scanf("%s", &Buff[0]);
 #endif
@@ -108,9 +116,10 @@ void Execute(const char* code, size_t codeLen)
 				}
 			case 'N':
 				g_iPointerLocation = 0;
+				pointerData = GetByIDPtr(g_iPointerLocation);
 				break;
 			case 'n':
-				printf("%i\n", *pointerData);
+				printf("%i", *pointerData);
 				break;
 			case 'R':
 				*pointerData = rand() % 100;
@@ -203,11 +212,18 @@ void Execute(const char* code, size_t codeLen)
 				{
 					int y;
 #ifdef WIN32
-					int readed = scanf_s("%i", &y);
+					char Buff[1024];
+					int readed = scanf_s("%s", &Buff[0], sizeof(Buff));
 #else
-					int readed = scanf("%i", &y);
+					int readed = scanf("%1023s", &Buff[0]);
 #endif
-					if (!readed) y = 0;
+					if (!readed) { y = 0; }
+					else
+					{
+						y = atoi(Buff);
+						if (y == 0 && !cisdigit(Buff[0])) y = Buff[0];
+					}
+
 					*pointerData = y;
 				}
 				break;
@@ -253,10 +269,7 @@ void Arythmetic(const char* code, size_t codeLen)
 	int nums[2];
 	memset(nums, 0, sizeof(nums) / sizeof(nums[0]));
 
-	VectorContainer_t actions;
-	memset(&actions, 0, sizeof(actions));
-	actions.m_ziTypeSize = sizeof(int);
-
+	int action = -1;
 	int pointer = 0;
 	bool hasAction = false;
 
@@ -265,31 +278,28 @@ void Arythmetic(const char* code, size_t codeLen)
 		switch (code[i])
 		{
 			case 'k':
-				nums[pointer] = GetByID(g_iPointerLocation + 1);
-				pointer += 1;
+				if (pointer < 2) nums[pointer++] = GetByID(g_iPointerLocation + 1);
 				break;
 			case 'i':
-				nums[pointer] = GetByID(g_iPointerLocation - 1);
-				pointer += 1;
+				if (pointer < 2) nums[pointer++] = GetByID(g_iPointerLocation - 1);
 				break;
 			case 't':
-				nums[pointer] = GetByID(g_iPointerLocation);
-				pointer += 1;
+				if (pointer < 2) nums[pointer++] = GetByID(g_iPointerLocation);
 				break;
 			case '+':
-				PushBack(&actions, ToPtr(1));
+				if (action == -1) action = 1;
 				hasAction = true;
 				break;
 			case '-':
-				PushBack(&actions, ToPtr(0));
+				if (action == -1) action = 0;
 				hasAction = true;
 				break;
 			case '*':
-				PushBack(&actions, ToPtr(2));
+				if (action == -1) action = 2;
 				hasAction = true;
 				break;
 			case '%':
-				PushBack(&actions, ToPtr(3));
+				if (action == -1) action = 3;
 				hasAction = true;
 				break;
 			default:
@@ -299,11 +309,11 @@ void Arythmetic(const char* code, size_t codeLen)
 
 	if (hasAction == true)
 	{
-		switch (*(int*)(GetElementByID(&actions, 0)->m_pObjectPtr))
+		switch (action)
 		{
 			case 0:
 				if (nums[0] > nums[1])
-					GetByID(g_iPointerLocation) = nums[0] - nums[1];
+					*GetByIDPtr(g_iPointerLocation) = nums[0] - nums[1];
 				else
 					putc('0', stdout);
 				break;
@@ -325,8 +335,6 @@ void Arythmetic(const char* code, size_t codeLen)
 		puts("ERROR! Action not found!");
 		exit(0);
 	}
-
-	Clear(&actions);
 }
 
 void IfExecute(const char* code, size_t codeLen)
@@ -345,16 +353,13 @@ void IfExecute(const char* code, size_t codeLen)
 		switch (code[i])
 		{
 			case 'i':
-				nums[pointer] = GetByID(g_iPointerLocation - 1);
-				pointer += 1;
+				if (pointer < 2) nums[pointer++] = GetByID(g_iPointerLocation - 1);
 				break;
 			case 'k':
-				nums[pointer] = GetByID(g_iPointerLocation + 1);
-				pointer += 1;
+				if (pointer < 2) nums[pointer++] = GetByID(g_iPointerLocation + 1);
 				break;
 			case 't':
-				nums[pointer] = GetByID(g_iPointerLocation);
-				pointer += 1;
+				if (pointer < 2) nums[pointer++] = GetByID(g_iPointerLocation);
 				break;
 			case '>':
 				action = 1;
@@ -371,7 +376,7 @@ void IfExecute(const char* code, size_t codeLen)
 			case '!':
 				{
 					int j = 0;
-					for (char* ptr = &((char*)code)[i + 1]; ptr != &code[codeLen - 1]; ptr++, j++)
+					for (char* ptr = &((char*)code)[i + 1]; ptr != &code[codeLen]; ptr++, j++)
 						execute[j] = *ptr;
 					bool anif1 = false;
 					bool anif2 = false;
@@ -492,9 +497,9 @@ static inline void MainFileExec()
 {
 	char Buff[_MAX_PATH];
 	memset(Buff, 0, sizeof(Buff) / sizeof(Buff[0]));
-	puts("File Name: ");
+	printf("File Name: ");
 #ifdef WIN32
-	(void)scanf_s("%s", &Buff[0]);
+	(void)scanf_s("%s", &Buff[0], sizeof(Buff));
 #else
 	(void)scanf("%s", &Buff[0]);
 #endif
@@ -521,10 +526,14 @@ static inline void MainShell()
 		printf("Code: ");
 		(void)getchar(); // For removing \n
 #ifdef WIN32
-		(void)scanf_s("%4095[^\n]", &code[0], 4096);
+		(void)scanf_s("%4095[^\n]", &code[0], sizeof(code));
 #else
 		(void)scanf("%4095[^\n]", &code[0]);
 #endif
 		Execute(code, strlen(code));
+
+		Clear(&g_Array);
+		PushBack(&g_Array, ToPtr(0));
+		g_iPointerLocation = 0;
 	}
 }

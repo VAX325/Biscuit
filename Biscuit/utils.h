@@ -60,8 +60,17 @@ static inline VectorIteratorPtr_t GetElementByID(VectorContainerPtr_t vec, size_
 static inline void Clear(VectorContainerPtr_t vec)
 {
 	for (size_t i = 0; i < vec->m_ziSize; i++)
+	{
+		free(vec->m_pElements[i]->m_pObjectPtr);
 		free(vec->m_pElements[i]);
-	free(vec->m_pElements);
+		vec->m_pElements[i] = NULL;
+	}
+
+	if (vec->m_ziSize)
+	{
+		free(vec->m_pElements);
+		vec->m_pElements = NULL;
+	}
 
 	vec->m_ziSize = 0;
 }
@@ -72,5 +81,7 @@ static inline void* ToPtr(size_t o)
 	memcpy(ptr, &o, sizeof(o));
 	return ptr;
 }
+
+static inline bool cisdigit(char c) { return c >= 48 && c <= 57; }
 
 #endif

@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <ctype.h>
 #ifdef WIN32
 #include <conio.h>
 #else
@@ -29,7 +30,7 @@
 
 #define BISCUIT_VERSION_API 1
 #define BISCUIT_VERSION_REV 0
-#define BISCUIT_VERSION_HORFIX a
+#define BISCUIT_VERSION_HORFIX d
 #define BISCUIT_VERSION_FULL xstr(BISCUIT_VERSION_API) "." xstr(BISCUIT_VERSION_REV) xstr(BISCUIT_VERSION_HORFIX)
 
 #if defined(WIN32)
