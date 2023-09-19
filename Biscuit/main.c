@@ -95,7 +95,7 @@ void Execute(const char* code, size_t codeLen)
 					char Buff[_MAX_PATH];
 					memset(Buff, 0, sizeof(Buff) / sizeof(Buff[0]));
 
-					puts("File Name: ");
+					printf("File Name: ");
 #ifdef WIN32
 					(void)scanf_s("%s", &Buff[0], sizeof(Buff));
 #else
@@ -178,16 +178,16 @@ void Execute(const char* code, size_t codeLen)
 				}
 				break;
 			case 'B':
-				if (code[i + 1] == '[')
+				if (code[++i] == '[')
 				{
-					int nigg = i + 2;
+					int k = i + 1;
 					int j = 0;
 					char filename[_MAX_PATH];
 					memset(filename, 0, sizeof(filename) / sizeof(filename[0]));
-					while (code[nigg] != ']')
+					while (code[k] != ']')
 					{
-						filename[j] = code[nigg];
-						nigg++;
+						filename[j] = code[k];
+						k++;
 						i++;
 						j++;
 					}
@@ -200,6 +200,7 @@ void Execute(const char* code, size_t codeLen)
 				{
 					// File not found
 					puts("ERROR! File not found!");
+					i--;
 				}
 				break;
 			case '9':
